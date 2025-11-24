@@ -64,25 +64,23 @@ function convertVietnameseToMorse(text) {
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let titBuffer = null, teBuffer = null;
 
-// [THÊM MỚI] Biến để quản lý âm thanh đang chạy
-let activeSources = [];   // Danh sách các âm đang phát
-let stopTimer = null;     // Bộ đếm giờ để tắt animation loa
+// [SỬA] Thêm biến startTimer vào đây
+let activeSources = [];   
+let stopTimer = null;     
+let audioStartTimer = null;  // <--- Biến mới để quản lý độ trễ 1s
 
-// [THÊM MỚI] Hàm ngắt toàn bộ âm thanh và hiệu ứng
 function stopAllSounds() {
-    // 1. Dừng tất cả các nguồn âm thanh đang chạy
-    activeSources.forEach(source => {
-        try { source.stop(); } catch(e) {} // Bỏ qua lỗi nếu âm đã tự tắt
-    });
-    activeSources = []; // Làm sạch danh sách
+    // 1. Dừng nguồn âm đang chạy
+    activeSources.forEach(source => { try { source.stop(); } catch(e) {} });
+    activeSources = [];
 
-    // 2. Hủy bộ đếm giờ tắt loa (nếu có)
-    if (stopTimer) {
-        clearTimeout(stopTimer);
-        stopTimer = null;
-    }
+    // 2. Hủy bộ đếm tắt loa (nếu có)
+    if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
 
-    // 3. Tắt ngay hiệu ứng rung (class 'playing') trên tất cả icon loa
+    // 3. [SỬA TẠI ĐÂY] Hủy bộ đếm chờ phát
+    if (audioStartTimer) { clearTimeout(audioStartTimer); audioStartTimer = null; } 
+
+    // 4. Tắt hiệu ứng rung
     document.querySelectorAll('.playing').forEach(el => el.classList.remove('playing'));
 }
 
@@ -107,7 +105,7 @@ function playMorseString(text, speedPercent, iconId) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (!titBuffer || !teBuffer) return 0;
 
-    // [QUAN TRỌNG] Dừng âm thanh cũ trước khi phát mới
+    // Ngắt âm thanh cũ ngay lập tức
     stopAllSounds();
 
     const telexText = convertVietnameseToMorse(text);
@@ -120,12 +118,12 @@ function playMorseString(text, speedPercent, iconId) {
     const baseGap = 0.25 - (speedFactor * 0.2); 
     const playbackRate = 0.8 + (speedFactor * 0.4); 
 
-    let startTime = audioCtx.currentTime;
-    if (startTime < audioCtx.currentTime) startTime = audioCtx.currentTime;
+    // [QUAN TRỌNG] Đặt thời gian bắt đầu là Tương lai (Sau 1 giây)
+    let startTime = audioCtx.currentTime + 0.5; 
 
     const icon = document.getElementById(iconId);
-    if(icon) icon.classList.add('playing');
 
+    // Lên lịch phát âm thanh
     for (let symbol of flatCode) {
         let buffer = (symbol === '.') ? titBuffer : (symbol === '-' ? teBuffer : null);
         if (buffer) {
@@ -133,42 +131,52 @@ function playMorseString(text, speedPercent, iconId) {
             source.buffer = buffer;
             source.playbackRate.value = playbackRate;
             source.connect(audioCtx.destination);
-            source.start(startTime);
             
-            // [THÊM] Lưu nguồn âm vào danh sách để quản lý
+            // source.start nhận tham số là thời gian tuyệt đối
+            source.start(startTime);
             activeSources.push(source);
 
             startTime += (buffer.duration / playbackRate) + baseGap;
         } else if (symbol === ' ') {
-            startTime += baseGap * 3;
+            startTime += baseGap * 7;
         }
     }
 
-    const duration = (startTime - audioCtx.currentTime) * 1000;
-    
-    // [SỬA] Gán vào biến toàn cục stopTimer để có thể hủy nếu cần
-    stopTimer = setTimeout(() => { 
-        if(icon) icon.classList.remove('playing'); 
-    }, duration);
+    // Tính tổng thời gian (bao gồm cả 1s delay)
+    const totalDuration = (startTime - audioCtx.currentTime) * 200;
 
-    return duration;
+    // [XỬ LÝ HIỆU ỨNG LOA]
+    if(icon) {
+        // [SỬA TẠI ĐÂY] Đổi startTimer thành audioStartTimer
+        audioStartTimer = setTimeout(() => {
+            icon.classList.add('playing');
+        }, 1000);
+
+        // Hẹn giờ tắt Rung khi phát xong
+        stopTimer = setTimeout(() => { 
+            icon.classList.remove('playing'); 
+        }, totalDuration);
+    }
+
+    return totalDuration;
 }
 
 function playSoundSimple(code) {
      if (!titBuffer || !teBuffer) return;
 
-     // [QUAN TRỌNG] Dừng âm thanh cũ
+     // Ngắt âm thanh cũ
      stopAllSounds();
 
-     let start = audioCtx.currentTime;
+     // [MỚI] Bắt đầu sau 1 giây
+     let start = audioCtx.currentTime + 1.0;
+
      for(let c of code) {
          let buf = c==='.'?titBuffer:teBuffer;
          let src = audioCtx.createBufferSource();
          src.buffer = buf; 
          src.connect(audioCtx.destination);
-         src.start(start); 
          
-         // [THÊM] Lưu nguồn âm
+         src.start(start); 
          activeSources.push(src);
 
          start += buf.duration + 0.15;
