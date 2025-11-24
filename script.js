@@ -10,12 +10,23 @@ const morseDb = {
     ' ': ' ' 
 };
 
+/* --- TÌM VÀ THAY THẾ BIẾN tablesConfig --- */
+
 const tablesConfig = {
-    1: ['E', 'I', 'S', 'H', 'T', 'M', 'O', 'CH'],
-    2: ['A', 'U', 'V', 'N', 'D', 'B'],
-    3: ['R', 'L', 'F', 'K', 'Y', 'Q'],
-    4: ['W', 'P', 'G', 'X'],
-    5: ['C', 'Z', 'J']
+    // Bảng 1: Sắp xếp đối xứng E-T, I-M, S-O...
+    1: ['E', 'T', 'I', 'M', 'S', 'O', 'H', 'CH'],
+
+    // Bảng 2: A-N, U-D...
+    2: ['A', 'N', 'U', 'D', 'V', 'B'],
+
+    // Bảng 3: R-K, L-Y...
+    3: ['R', 'K', 'L', 'Y', 'F', 'Q'],
+
+    // Bảng 4: W-G, P-X
+    4: ['W', 'G', 'P', 'X'],
+
+    // Bảng 5: Bất quy tắc
+    5: ['C', 'J', 'Z']
 };
 
 /* --- BẢNG MÃ HÓA TIẾNG VIỆT SANG TELEX --- */
@@ -53,6 +64,28 @@ function convertVietnameseToMorse(text) {
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let titBuffer = null, teBuffer = null;
 
+// [THÊM MỚI] Biến để quản lý âm thanh đang chạy
+let activeSources = [];   // Danh sách các âm đang phát
+let stopTimer = null;     // Bộ đếm giờ để tắt animation loa
+
+// [THÊM MỚI] Hàm ngắt toàn bộ âm thanh và hiệu ứng
+function stopAllSounds() {
+    // 1. Dừng tất cả các nguồn âm thanh đang chạy
+    activeSources.forEach(source => {
+        try { source.stop(); } catch(e) {} // Bỏ qua lỗi nếu âm đã tự tắt
+    });
+    activeSources = []; // Làm sạch danh sách
+
+    // 2. Hủy bộ đếm giờ tắt loa (nếu có)
+    if (stopTimer) {
+        clearTimeout(stopTimer);
+        stopTimer = null;
+    }
+
+    // 3. Tắt ngay hiệu ứng rung (class 'playing') trên tất cả icon loa
+    document.querySelectorAll('.playing').forEach(el => el.classList.remove('playing'));
+}
+
 async function loadSoundFile(url) {
     try {
         const response = await fetch(url);
@@ -73,6 +106,9 @@ async function loadSoundFile(url) {
 function playMorseString(text, speedPercent, iconId) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (!titBuffer || !teBuffer) return 0;
+
+    // [QUAN TRỌNG] Dừng âm thanh cũ trước khi phát mới
+    stopAllSounds();
 
     const telexText = convertVietnameseToMorse(text);
     const codeSequence = telexText.split(/\s+/).map(char => {
@@ -98,6 +134,10 @@ function playMorseString(text, speedPercent, iconId) {
             source.playbackRate.value = playbackRate;
             source.connect(audioCtx.destination);
             source.start(startTime);
+            
+            // [THÊM] Lưu nguồn âm vào danh sách để quản lý
+            activeSources.push(source);
+
             startTime += (buffer.duration / playbackRate) + baseGap;
         } else if (symbol === ' ') {
             startTime += baseGap * 3;
@@ -105,18 +145,33 @@ function playMorseString(text, speedPercent, iconId) {
     }
 
     const duration = (startTime - audioCtx.currentTime) * 1000;
-    setTimeout(() => { if(icon) icon.classList.remove('playing'); }, duration);
+    
+    // [SỬA] Gán vào biến toàn cục stopTimer để có thể hủy nếu cần
+    stopTimer = setTimeout(() => { 
+        if(icon) icon.classList.remove('playing'); 
+    }, duration);
+
     return duration;
 }
 
 function playSoundSimple(code) {
      if (!titBuffer || !teBuffer) return;
+
+     // [QUAN TRỌNG] Dừng âm thanh cũ
+     stopAllSounds();
+
      let start = audioCtx.currentTime;
      for(let c of code) {
          let buf = c==='.'?titBuffer:teBuffer;
          let src = audioCtx.createBufferSource();
-         src.buffer = buf; src.connect(audioCtx.destination);
-         src.start(start); start += buf.duration + 0.15;
+         src.buffer = buf; 
+         src.connect(audioCtx.destination);
+         src.start(start); 
+         
+         // [THÊM] Lưu nguồn âm
+         activeSources.push(src);
+
+         start += buf.duration + 0.15;
      }
 }
 
