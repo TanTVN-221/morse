@@ -143,7 +143,7 @@ function playMorseString(text, speedPercent, iconId) {
     }
 
     // Tính tổng thời gian (bao gồm cả 1s delay)
-    const totalDuration = (startTime - audioCtx.currentTime) * 200;
+    const totalDuration = (startTime - audioCtx.currentTime) * 1000;
 
     // [XỬ LÝ HIỆU ỨNG LOA]
     if(icon) {
@@ -219,12 +219,16 @@ function nextQuiz() {
     if (quizState.round >= 10) { showGameOver(true); return; }
     quizState.round++;
     document.getElementById('current-round').innerText = quizState.round;
+    
+    // Reset thanh thời gian về đầy
     document.getElementById('timer-bar').style.width = '100%';
     document.getElementById('timer-bar').style.transition = 'none';
 
+    // Chọn đề
     const pool = tablesConfig[practiceSettings.table];
     quizState.target = pool[Math.floor(Math.random() * pool.length)];
 
+    // Render đáp án
     let options = [quizState.target];
     let distractors = pool.filter(c => c !== quizState.target).sort(()=>0.5-Math.random()).slice(0,3);
     options = options.concat(distractors).sort(()=>0.5-Math.random());
@@ -233,18 +237,28 @@ function nextQuiz() {
     area.innerHTML = '';
     options.forEach(char => {
         const btn = document.createElement('div');
+        // [QUAN TRỌNG] Thêm class 'disabled' ngay từ đầu để không cho bấm khi đang nghe
         btn.className = 'ans-btn disabled';
         btn.innerText = char;
         btn.onclick = () => checkQuizAnswer(char, btn);
         area.appendChild(btn);
     });
 
+    // Phát âm thanh
     const dur = playMorseString(quizState.target, 50, 'speaker-practice');
+    
+    // [QUAN TRỌNG] Chờ âm thanh phát xong (dur) mới bắt đầu tính giờ
     setTimeout(() => {
+        // Kiểm tra nếu người chơi đã thoát hoặc game đã dừng thì không làm gì cả
         if(!quizState.isPlaying) return;
+        
+        // 1. Mở khóa các nút đáp án
         document.querySelectorAll('.ans-btn').forEach(b => b.classList.remove('disabled'));
+        
+        // 2. Bắt đầu tính giờ (thanh đỏ bắt đầu chạy)
         startTimer();
-    }, dur);
+        
+    }, dur); // dur chính là tổng thời gian phát âm thanh (đã bao gồm 1s delay)
 }
 
 function startTimer() {
