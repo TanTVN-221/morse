@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học Morse GĐPT Đức Tâm</title>
+    <style>
+        :root {
+            --primary-color: #2b4c99;
+            --green-btn: #22c55e;
+            --blue-btn: #1d4ed8;
+            --orange-btn: #f97316;
+            --gray-btn: #f3f4f6;
+            --bg-color: #f3f4f6;
+            --white: #ffffff;
+            --text-color: #1f2937;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0; padding: 0; padding-bottom: 90px;
+            user-select: none;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--white); padding: 15px 20px;
+            display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-placeholder {
+            width: 40px; height: 40px; background-color: #2e7d32;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold;
+        }
+        .app-title h1 { margin: 0; font-size: 18px; color: var(--primary-color); }
+
+        /* Styles chung */
+        .tab-content { display: none; padding: 20px; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card-box {
+            background: var(--white); border-radius: 20px; padding: 25px;
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            max-width: 450px; margin: 10px auto; position: relative;
+        }
+
+        /* --- TAB 1: BẢNG HỌC --- */
+        .group-header { 
+            background: #e0e7ff; color: var(--primary-color); 
+            padding: 10px; border-radius: 8px; font-weight: bold; 
+            margin-top: 20px; margin-bottom: 10px; text-align: left;
+        }
+        .morse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; }
+        .morse-card {
+            background: var(--white); border-radius: 8px; padding: 10px;
+            text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer; border: 1px solid #e5e7eb;
+        }
+        .morse-card:active { background-color: #eff6ff; }
+        .char-large { font-size: 24px; font-weight: bold; color: var(--primary-color); display: block;}
+        .morse-code { font-size: 14px; color: #6b7280; font-family: monospace; font-weight: bold;}
+
+        /* --- TAB 2: LUYỆN TẬP (Quiz) --- */
+        .selection-label { font-weight: bold; margin: 15px 0 5px; text-align: left; color: #4b5563; }
+        .grid-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .option-btn { padding: 10px; border: 1px solid #d1d5db; background: #f9fafb; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .option-btn.selected { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        .game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .score-display { font-size: 18px; font-weight: bold; color: var(--green-btn); }
+        .round-display { font-size: 14px; color: #6b7280; background: #e5e7eb; padding: 5px 10px; border-radius: 15px;}
+        
+        .timer-bar-bg { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+        .timer-bar-fill { height: 100%; background: var(--danger-color); width: 100%; transition: width 0.1s linear; }
+
+        .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;}
+        .ans-btn {
+            padding: 20px; font-size: 32px; font-weight: bold; color: var(--primary-color);
+            background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 15px; cursor: pointer;
+            transition: all 0.1s; user-select: none;
+        }
+        .ans-btn:active { transform: scale(0.95); }
+        .ans-btn.correct { background: #22c55e; color: white; border-color: #22c55e; }
+        .ans-btn.wrong { background: #ef4444; color: white; border-color: #ef4444; }
+        .ans-btn.disabled { opacity: 0.5; pointer-events: none; }
+
+        /* --- TAB 3: NHẬN TIN --- */
+        .top-controls { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px; }
+        
+        .btn-play-green {
+            background-color: var(--green-btn); color: white;
+            border: none; border-radius: 10px; padding: 12px 0;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: 0 4px 6px rgba(34, 197, 94, 0.3);
+        }
+        
+        .btn-change-orange {
+            background-color: var(--orange-btn); color: white;
+            border: none; border-radius: 10px; padding: 12px 0;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
+        }
+
+        .speed-control-area { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; color: #64748b; margin-bottom: 5px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        .input-answer-box {
+            width: 90%; padding: 15px; font-size: 18px; 
+            border: 2px solid #e2e8f0; border-radius: 10px;
+            text-align: center; text-transform: uppercase;
+            font-weight: bold; color: var(--primary-color);
+            margin-bottom: 15px; outline: none;
+        }
+        .action-buttons { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+        .btn-check-blue { background-color: var(--blue-btn); color: white; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; }
+        .btn-view-gray { background-color: var(--gray-btn); color: #475569; border: none; border-radius: 10px; padding: 15px; font-weight: bold; cursor: pointer; }
+        .result-text { height: 20px; margin-top: 10px; font-weight: bold; font-size: 14px; }
+        .txt-correct { color: #16a34a; } .txt-wrong { color: #dc2626; }
+
+        /* Animation Loa */
+        .speaker-anim { font-size: 60px; color: var(--primary-color); margin: 10px 0; transition: 0.2s; }
+        .speaker-anim.playing { animation: pulse 0.5s infinite; color: var(--green-btn); }
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
+
+        /* Popup */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 200; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 20px; width: 80%; max-width: 300px; text-align: center;
+            animation: zoomIn 0.3s;
+        }
+        @keyframes zoomIn { from {transform: scale(0.5); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+        .btn-retry { background: var(--primary-color); color: white; padding: 12px 25px; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; width: 100%; }
+
+        /* Nav */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 400px; background: var(--white);
+            border-radius: 30px; display: flex; justify-content: space-around;
+            padding: 10px 5px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); z-index: 1000;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #9ca3af; cursor: pointer; font-size: 12px; padding: 5px 15px; border-radius: 20px; transition: 0.3s; }
+        .nav-item.active { background-color: #eff6ff; color: var(--primary-color); font-weight: bold; }
+        .nav-icon { font-size: 20px; margin-bottom: 2px; }
+    </style>
+</head>
+<body>
+
+    <header style="justify-content: center;">
+        <div class="logo-area" style="display: flex;">
+            <div class="logo-placeholder"><img src="./HHHS.png" style="height: 3rem;"></div>
+            <div style="display: flex; flex-direction: column;">
+                <div class="app-title"><h1>GĐPT ĐỨC TÂM</h1></div>
+                <div class="app-title" ><h1 style="color: orange; font-size: 14px;">Học Morse</h1></div>
+            </div>
+            
+        </div>
+    </header>
+
+    <div id="tab-study" class="tab-content active">
+        <div id="study-content"></div>
+    </div>
+
+    <div id="tab-practice" class="tab-content">
+        <div id="practice-menu" class="card-box">
+            <div style="font-size: 40px; margin-bottom: 10px;">🎧</div>
+            <h3>Luyện Nghe Phản Xạ</h3>
+            <div class="selection-label">Chọn Bảng:</div>
+            <div class="grid-options" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="option-btn selected" onclick="selectFilter('table', 1, this)">Bảng 1</div>
+                <div class="option-btn" onclick="selectFilter('table', 2, this)">Bảng 2</div>
+                <div class="option-btn" onclick="selectFilter('table', 3, this)">Bảng 3</div>
+                <div class="option-btn" onclick="selectFilter('table', 4, this)">Bảng 4</div>
+                <div class="option-btn" onclick="selectFilter('table', 5, this)">Bảng 5</div>
+            </div>
+            <div class="selection-label">Thời gian suy nghĩ:</div>
+            <div class="grid-options">
+                <div class="option-btn selected" onclick="selectFilter('speed', 5000, this)">Chậm (5s)</div>
+                <div class="option-btn" onclick="selectFilter('speed', 3000, this)">TB (3s)</div>
+                <div class="option-btn" onclick="selectFilter('speed', 1000, this)">Nhanh (1s)</div>
+            </div>
+            <button id="btn-start" class="btn-play-green" style="margin-top:20px; width:100%;" onclick="initAndStart()">
+                Bắt Đầu (10 Vòng)
+            </button>
+        </div>
+
+        <div id="practice-game" class="card-box" style="display: none;">
+            <div class="game-header">
+                <div class="round-display">Vòng: <span id="current-round">1</span>/10</div>
+                <div class="score-display">Điểm: <span id="current-score">0</span></div>
+            </div>
+            <div class="hint-text">Nghe và chọn đáp án</div>
+            <div id="speaker-practice" class="speaker-anim" onclick="replayAudio()">🔊</div>
+            <div class="timer-bar-bg">
+                <div id="timer-bar" class="timer-bar-fill" style="width: 100%;"></div>
+            </div>
+            <div id="answers-area" class="answers-grid"></div>
+        </div>
+    </div>
+
+    <div id="tab-receive" class="tab-content">
+        <div class="card-box">
+            <div id="speaker-receive" class="speaker-anim" style="margin-bottom: 20px;">🎧</div>
+            
+            <div class="top-controls">
+                <button class="btn-play-green" onclick="playCurrentQuestion()">
+                    <span>▶</span> Phát Tin
+                </button>
+                <button class="btn-change-orange" onclick="pickRandomQuestion()">
+                    <span>🔄</span> Đổi Câu
+                </button>
+            </div>
+
+            <div class="speed-control-area">
+                <div class="slider-labels">
+                    <span>CHẬM</span><span>TỐC ĐỘ</span><span>NHANH</span>
+                </div>
+                <input type="range" id="speed-range" min="1" max="100" value="50">
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+            <input type="text" id="user-input-receive" class="input-answer-box" placeholder="NHẬP CÂU BẠN DỊCH ĐƯỢC...">
+            
+            <div class="action-buttons">
+                <button class="btn-check-blue" onclick="checkCsvAnswer()">Kiểm Tra</button>
+                <button class="btn-view-gray" onclick="revealAnswer()">Xem Đáp Án</button>
+            </div>
+            <div id="receive-result" class="result-text"></div>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-title" style="font-size:24px; font-weight:bold; margin-bottom:10px;">Kết Thúc!</div>
+            <div id="modal-msg" style="color: #6b7280;"></div>
+            <div style="font-size:40px; color:var(--primary-color); font-weight:bold; margin:20px 0;" id="final-score">0</div>
+            <button class="btn-retry" onclick="resetToMenu()">Quay lại Menu</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('study', this)"><div class="nav-icon">📖</div><span>Bảng Học</span></div>
+        <div class="nav-item" onclick="switchTab('practice', this)"><div class="nav-icon">🎮</div><span>Luyện Tập</span></div>
+        <div class="nav-item" onclick="switchTab('receive', this)"><div class="nav-icon">👁️</div><span>Nhận Tin</span></div>
+    </div>
+
+    <script>
+        /* --- DỮ LIỆU --- */
+        const morseDb = {
+            'E': '.', 'I': '..', 'S': '...', 'H': '....',
+            'T': '-', 'M': '--', 'O': '---', 'CH': '----',
+            'A': '.-', 'U': '..-', 'V': '...-',
+            'N': '-.', 'D': '-..', 'B': '-...',
+            'R': '.-.', 'L': '.-..', 'F': '..-.',
+            'K': '-.-', 'Y': '-.--', 'Q': '--.-',
+            'W': '.--', 'P': '.--.', 'G': '--.', 'X': '-..-',
+            'C': '-.-.', 'Z': '--..', 'J': '.---',
+            '0': '-----', '1': '.----', '2': '..---', '3': '...--', '4': '....-', 
+            '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.',
+            ' ': ' ' // Hỗ trợ khoảng trắng
+        };
+
+        const tablesConfig = {
+            1: ['E', 'I', 'S', 'H', 'T', 'M', 'O', 'CH'],
+            2: ['A', 'U', 'V', 'N', 'D', 'B'],
+            3: ['R', 'L', 'F', 'K', 'Y', 'Q'],
+            4: ['W', 'P', 'G', 'X'],
+            5: ['C', 'Z', 'J']
+        };
+
+        /* --- AUDIO --- */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let titBuffer = null, teBuffer = null;
+
+        async function loadSoundFile(url) {
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                return await audioCtx.decodeAudioData(arrayBuffer);
+            } catch (e) { console.error(e); return null; }
+        }
+
+        (async function initAudio() {
+            titBuffer = await loadSoundFile('tit.mp3');
+            teBuffer = await loadSoundFile('te.mp3');
+            if(titBuffer && teBuffer) document.getElementById('btn-start').innerText = "Bắt Đầu (10 Vòng)";
+        })();
+
+        function playMorseString(text, speedPercent, iconId) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!titBuffer || !teBuffer) return 0;
+
+            const code = text.toUpperCase().split('').map(c => morseDb[c] ? morseDb[c] : ' ').join(' ');
+            const speedFactor = parseInt(speedPercent) / 100; 
+            const baseGap = 0.25 - (speedFactor * 0.2); 
+            const playbackRate = 0.8 + (speedFactor * 0.4); 
+
+            let startTime = audioCtx.currentTime;
+            if (startTime < audioCtx.currentTime) startTime = audioCtx.currentTime;
+
+            const icon = document.getElementById(iconId);
+            if(icon) icon.classList.add('playing');
+
+            for (let symbol of code) {
+                let buffer = (symbol === '.') ? titBuffer : (symbol === '-' ? teBuffer : null);
+                if (buffer) {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.playbackRate.value = playbackRate;
+                    source.connect(audioCtx.destination);
+                    source.start(startTime);
+                    startTime += (buffer.duration / playbackRate) + baseGap;
+                } else if (symbol === ' ') {
+                    startTime += baseGap * 3;
+                }
+            }
+
+            const duration = (startTime - audioCtx.currentTime) * 1000;
+            setTimeout(() => { if(icon) icon.classList.remove('playing'); }, duration);
+            return duration;
+        }
+        
+        // Wrapper đơn giản cho Bảng Học
+        function playSoundSimple(code) {
+             if (!titBuffer || !teBuffer) return;
+             let start = audioCtx.currentTime;
+             for(let c of code) {
+                 let buf = c==='.'?titBuffer:teBuffer;
+                 let src = audioCtx.createBufferSource();
+                 src.buffer = buf; src.connect(audioCtx.destination);
+                 src.start(start); start += buf.duration + 0.15;
+             }
+        }
+
+        /* --- RENDER BẢNG HỌC --- */
+        const studyContent = document.getElementById('study-content');
+        for (let i = 1; i <= 5; i++) {
+            const chars = tablesConfig[i];
+            let html = `<div class="group-header">Bảng ${i}</div><div class="morse-grid">`;
+            chars.forEach(char => {
+                html += `<div class="morse-card" onclick="playSoundSimple('${morseDb[char]}')">
+                    <span class="char-large">${char}</span><span class="morse-code">${morseDb[char]}</span>
+                </div>`;
+            });
+            studyContent.innerHTML += html + `</div>`;
+        }
+
+        /* --- LUYỆN TẬP --- */
+        let practiceSettings = { table: 1, speed: 5000 };
+        let quizState = { score: 0, round: 0, target: '', timerId: null, isPlaying: false };
+
+        function selectFilter(type, val, el) {
+            practiceSettings[type] = val;
+            el.parentNode.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        function initAndStart() {
+            if(!titBuffer || !teBuffer) { alert("Thiếu file mp3!"); return; }
+            document.getElementById('practice-menu').style.display = 'none';
+            document.getElementById('practice-game').style.display = 'block';
+            quizState.score = 0; quizState.round = 0; quizState.isPlaying = true;
+            document.getElementById('current-score').innerText = '0';
+            nextQuiz();
+        }
+
+        function nextQuiz() {
+            if (quizState.round >= 10) { showGameOver(true); return; }
+            quizState.round++;
+            document.getElementById('current-round').innerText = quizState.round;
+            document.getElementById('timer-bar').style.width = '100%';
+            document.getElementById('timer-bar').style.transition = 'none';
+
+            const pool = tablesConfig[practiceSettings.table];
+            quizState.target = pool[Math.floor(Math.random() * pool.length)];
+
+            let options = [quizState.target];
+            let distractors = pool.filter(c => c !== quizState.target).sort(()=>0.5-Math.random()).slice(0,3);
+            options = options.concat(distractors).sort(()=>0.5-Math.random());
+
+            const area = document.getElementById('answers-area');
+            area.innerHTML = '';
+            options.forEach(char => {
+                const btn = document.createElement('div');
+                btn.className = 'ans-btn disabled';
+                btn.innerText = char;
+                btn.onclick = () => checkQuizAnswer(char, btn);
+                area.appendChild(btn);
+            });
+
+            const dur = playMorseString(quizState.target, 50, 'speaker-practice');
+            setTimeout(() => {
+                if(!quizState.isPlaying) return;
+                document.querySelectorAll('.ans-btn').forEach(b => b.classList.remove('disabled'));
+                startTimer();
+            }, dur);
+        }
+
+        function startTimer() {
+            const bar = document.getElementById('timer-bar');
+            void bar.offsetWidth; 
+            bar.style.transition = `width ${practiceSettings.speed}ms linear`;
+            bar.style.width = '0%';
+            quizState.timerId = setTimeout(() => {
+                if(quizState.isPlaying) showGameOver(false, `Hết giờ! Đáp án: ${quizState.target}`);
+            }, practiceSettings.speed);
+        }
+
+        function checkQuizAnswer(char, btn) {
+            if(btn.classList.contains('disabled')) return;
+            clearTimeout(quizState.timerId);
+            document.querySelectorAll('.ans-btn').forEach(b => b.classList.add('disabled'));
+            if(char === quizState.target) {
+                btn.classList.add('correct'); quizState.score += 10;
+                document.getElementById('current-score').innerText = quizState.score;
+                setTimeout(nextQuiz, 1000);
+            } else {
+                btn.classList.add('wrong');
+                document.querySelectorAll('.ans-btn').forEach(b => { if(b.innerText === quizState.target) b.classList.add('correct'); });
+                setTimeout(() => showGameOver(false, `Sai rồi! Đáp án: ${quizState.target}`), 1500);
+            }
+        }
+        function replayAudio() { if(quizState.isPlaying) playMorseString(quizState.target, 50, 'speaker-practice'); }
+        function showGameOver(isWin, msg) {
+            quizState.isPlaying = false; clearTimeout(quizState.timerId);
+            document.getElementById('modal-title').innerText = isWin ? "Hoàn Thành!" : "Kết Thúc";
+            document.getElementById('modal-title').style.color = isWin ? "#22c55e" : "#ef4444";
+            document.getElementById('modal-msg').innerText = isWin ? "Làm tốt lắm!" : msg;
+            document.getElementById('final-score').innerText = quizState.score;
+            document.getElementById('game-over-modal').style.display = 'flex';
+        }
+        function resetToMenu() {
+            document.getElementById('game-over-modal').style.display = 'none';
+            document.getElementById('practice-game').style.display = 'none';
+            document.getElementById('practice-menu').style.display = 'block';
+        }
+
+        /* --- NHẬN TIN (CSV SIMPLE) --- */
+        let questionList = [];
+        let currentRecQuestion = { answer: "" };
+
+        (async function loadCSV() {
+            try {
+                const res = await fetch('data.csv');
+                if(!res.ok) throw new Error();
+                const text = await res.text();
+                const lines = text.split('\n');
+                questionList = [];
+                for(let line of lines) {
+                    const ans = line.trim().toUpperCase();
+                    if(ans) questionList.push({ answer: ans });
+                }
+                pickRandomQuestion();
+            } catch(e) {
+                questionList = [{answer:'BI TRI DUNG'}, {answer:'TINH TAN'}];
+                pickRandomQuestion();
+            }
+        })();
+
+        function pickRandomQuestion() {
+            if(questionList.length === 0) return;
+            // Xoay icon nút đổi
+            const btn = document.querySelector('.btn-change-orange span');
+            if(btn) { btn.style.transition='transform 0.5s'; btn.style.transform='rotate(360deg)'; setTimeout(()=>btn.style.transform='rotate(0deg)',500); }
+            
+            const idx = Math.floor(Math.random() * questionList.length);
+            currentRecQuestion = questionList[idx];
+            document.getElementById('user-input-receive').value = '';
+            document.getElementById('receive-result').innerText = '';
+        }
+
+        function playCurrentQuestion() {
+            playMorseString(currentRecQuestion.answer, document.getElementById('speed-range').value, 'speaker-receive');
+        }
+
+        function checkCsvAnswer() {
+            const val = document.getElementById('user-input-receive').value.trim().toUpperCase();
+            const res = document.getElementById('receive-result');
+            if(val === currentRecQuestion.answer) {
+                res.innerText = "CHÍNH XÁC!"; res.className = "result-text txt-correct";
+            } else {
+                res.innerText = "Sai rồi!"; res.className = "result-text txt-wrong";
+            }
+        }
+        function revealAnswer() {
+            const res = document.getElementById('receive-result');
+            res.innerText = "Đáp án: " + currentRecQuestion.answer;
+            res.className = "result-text"; res.style.color="#64748b";
+        }
+
+        function switchTab(id, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            el.classList.add('active');
+        }
+    </script>
+</body>
+</html>
